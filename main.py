@@ -3,6 +3,7 @@ import os
 from pyrogram import Client, filters
 from pyrogram.enums import MessageEntityType
 
+# API credentials
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
 target_channel = os.getenv("TARGET_CHANNEL")
@@ -38,8 +39,9 @@ async def main():
     for app in clients:
         await app.start()
     print("Bot is ready and listening...")
-    await asyncio.idle()
+    # Sahi tareeka bot ko active rakhne ka
+    await asyncio.Event().wait()
 
 if __name__ == "__main__":
     asyncio.run(main())
-# Trigger rebuild
+
