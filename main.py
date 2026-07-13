@@ -11,22 +11,21 @@ bot_username = "patrickstarsrobot"
 
 # Sessions loading
 sessions = [os.getenv(f"SESSION_{i}") for i in range(1, 14) if os.getenv(f"SESSION_{i}")]
-
-# 'in_memory' use kiya hai taaki koi purana cache error na aaye
 clients = [Client(f"session_{i}", api_id=api_id, api_hash=api_hash, session_string=s, in_memory=True) for i, s in enumerate(sessions)]
 
 async def claim_code(client, code):
     try:
-        # Button click simulate
-        async for msg in client.get_chat_history(bot_username, limit=1):
+        # 1. Pehle "Промокод" button dhoondho aur click karo
+        async for msg in client.get_chat_history(bot_username, limit=3):
             if msg.reply_markup:
                 for row in msg.reply_markup.inline_keyboard:
                     for button in row:
                         if "Промокод" in button.text:
                             await client.request_callback_answer(chat_id=bot_username, message_id=msg.id, callback_data=button.callback_data)
-                            await asyncio.sleep(0.2)
-        
-        # Send Code
+                            print(f"[{client.name}] 'Промокод' button clicked.")
+                            await asyncio.sleep(0.5) # Bot ke response ka intezar
+                            
+        # 2. Ab code bhejo
         await client.send_message(bot_username, code)
         print(f"[{client.name}] Code {code} successfully sent!")
     except Exception as e:
@@ -39,6 +38,7 @@ async def monitor(client, message):
             if entity.type == MessageEntityType.SPOILER:
                 code = message.text[entity.offset : entity.offset + entity.length]
                 print(f"Code Found: {code}. Starting sequence...")
+                # Sabhi sessions ek saath trigger honge
                 tasks = [claim_code(c, code) for c in clients]
                 await asyncio.gather(*tasks)
 
