@@ -15,6 +15,7 @@ async def start_userbot(session_str, account_num):
     await client.start()
     print(f"✅ Account {account_num} is online")
 
+    # Spoiler detection ko bilkul simple aur alag rakha hai
     @client.on(events.NewMessage(chats=SOURCE_CHANNEL))
     async def spoiler_handler(event):
         spoiler_text = None
@@ -23,44 +24,43 @@ async def start_userbot(session_str, account_num):
                 if isinstance(entity, MessageEntitySpoiler):
                     spoiler_text = event.raw_text[entity.offset:entity.offset+entity.length]
         
-        if not spoiler_text: return
-        print(f"📌 [{account_num}] Spoiler detected: {spoiler_text}")
-
-        try:
-            # Conversation ko 'with' block se bahar access karo ya 
-            # check karo ki koi existing conversation to nahi
-            async with client.conversation(TARGET_BOT, timeout=20) as conv:
-                await conv.send_message('/start')
-                start_resp = await conv.get_response()
-                
-                # Click 'Профиль'
-                if start_resp.buttons:
-                    for row in start_resp.buttons:
-                        for button in row:
-                            if "Профиль" in button.text:
-                                await button.click()
-                                break
-                
-                # Click 'Промокод'
-                promo_menu = await conv.get_response()
-                if promo_menu.buttons:
-                    for row in promo_menu.buttons:
-                        for button in row:
-                            if "Промокод" in button.text:
-                                await button.click()
-                                break
-                
-                # Send spoiler
-                await conv.get_response()
-                await conv.send_message(spoiler_text)
-                print(f"🚀 [{account_num}] Code {spoiler_text} sent!")
-                        
-        except asyncio.TimeoutError:
-            print(f"❌ [{account_num}] Timeout error: Bot slow hai.")
-        except Exception as e:
-            print(f"❌ [{account_num}] Error: {e}")
+        if spoiler_text:
+            print(f"📌 [{account_num}] Spoiler detected: {spoiler_text}")
+            # Yahan se interaction trigger karo
+            await perform_interaction(client, account_num, spoiler_text)
 
     return client
+
+# Interaction process ko ek separate function mein dala hai
+async def perform_interaction(client, account_num, spoiler_text):
+    try:
+        async with client.conversation(TARGET_BOT, timeout=20) as conv:
+            await conv.send_message('/start')
+            start_resp = await conv.get_response()
+            
+            # Click 'Профиль'
+            if start_resp.buttons:
+                for row in start_resp.buttons:
+                    for button in row:
+                        if "Профиль" in button.text:
+                            await button.click()
+                            break
+            
+            # Click 'Промокод'
+            promo_menu = await conv.get_response()
+            if promo_menu.buttons:
+                for row in promo_menu.buttons:
+                    for button in row:
+                        if "Промокод" in button.text:
+                            await button.click()
+                            break
+            
+            # Send spoiler
+            await conv.get_response()
+            await conv.send_message(spoiler_text)
+            print(f"🚀 [{account_num}] Code {spoiler_text} sent!")
+    except Exception as e:
+        print(f"❌ [{account_num}] Interaction error: {e}")
 
 async def main():
     if not SESSION_STRINGS or SESSION_STRINGS == [""]: return
