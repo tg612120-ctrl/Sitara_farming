@@ -10,17 +10,16 @@ API_HASH = os.getenv("API_HASH")
 SESSION_STRINGS = os.getenv("SESSION_STRINGS", "").split(",")
 SOURCE_CHANNEL = os.getenv("SOURCE_CHANNEL")
 TARGET_BOT = 'patrickstarsrobot'
-
 TARGET_RESPONSE = "✨ Для получения звезд на твой баланс введи промокод:"
 
 async def start_userbot(session_str, account_num):
     client = TelegramClient(StringSession(session_str.strip()), API_ID, API_HASH)
     await client.start()
-    print(f"✅ अकाउंट {account_num} ऑनलाइन है")
+    print(f"✅ Account {account_num} is online")
 
     @client.on(events.NewMessage(chats=SOURCE_CHANNEL))
     async def spoiler_handler(event):
-        # 1. Spoiler extract karo
+        # 1. Extract the spoiler
         spoiler_text = None
         if event.message.entities:
             for entity in event.message.entities:
@@ -28,24 +27,21 @@ async def start_userbot(session_str, account_num):
                     spoiler_text = event.raw_text[entity.offset:entity.offset+entity.length]
         
         if not spoiler_text: return
-        print(f"📌 [{account_num}] स्पॉइलर मिला: {spoiler_text}")
+        print(f"📌 [{account_num}] Spoiler found: {spoiler_text}")
 
         try:
-            async with client.conversation(TARGET_BOT) as conv:
-                # 1. PIN Message click karo
-                full_chat = await client.get_full_chat(TARGET_BOT)
-                pinned_msg = await client.get_messages(TARGET_BOT, ids=full_chat.full_chat.pinned_msg_id)
-                
-                if pinned_msg and pinned_msg.buttons:
-                    # Pin message ka main button click karo
-                    await pinned_msg.click(0)
-                    print(f"🔘 [{account_num}] Pin message clicked.")
+            # FIX: Using direct method instead of get_full_chat
+            bot_entity = await client.get_input_entity(TARGET_BOT)
+            pinned_msg = await client.get_messages(bot_entity, ids=0)
+            
+            if pinned_msg and pinned_msg.buttons:
+                await pinned_msg.click(0)
+                print(f"🔘 [{account_num}] Pin message clicked.")
 
-                    # 2. Menu message ka wait karo
+                async with client.conversation(TARGET_BOT) as conv:
+                    # Wait for menu message
                     menu_msg = await conv.wait_event(events.NewMessage(chats=TARGET_BOT), timeout=15)
-                    
-                    # 3. "Промокод" button dhundo aur click karo
-                    if menu_msg.message.buttons:
+                    if menu_msg and menu_msg.message.buttons:
                         for row in menu_msg.message.buttons:
                             for button in row:
                                 if "Промокод" in button.text:
@@ -53,10 +49,9 @@ async def start_userbot(session_str, account_num):
                                     print(f"🔘 [{account_num}] 'Промокод' button clicked.")
                                     break
                     
-                    # 4. Target response ka wait karo
+                    # Wait for target response
                     final_response = await conv.wait_event(events.NewMessage(chats=TARGET_BOT), timeout=15)
-                    
-                    if TARGET_RESPONSE in final_response.message.text:
+                    if final_response and TARGET_RESPONSE in final_response.message.text:
                         await conv.send_message(spoiler_text)
                         print(f"🚀 [{account_num}] Code {spoiler_text} successfully sent!")
                         
@@ -66,15 +61,13 @@ async def start_userbot(session_str, account_num):
     return client
 
 async def main():
-    if not SESSION_STRINGS or SESSION_STRINGS == [""]:
-        print("SESSION_STRINGS variable set nahi hai!")
+    if not SESSION_STRINGS or SESSION_STRINGS == [""]: 
+        print("SESSION_STRINGS variable not set!")
         return
-
-    print(f"🚀 कुल {len(SESSION_STRINGS)} अकाउंट्स के साथ स्टार्ट हो रहा है...")
-    tasks = [start_userbot(s, i) for i, s in enumerate(SESSION_STRINGS, start=1)]
-    await asyncio.gather(*tasks)
-    
-    # Bot ko hamesha chalate rakho
+        
+    print(f"🚀 Starting with {len(SESSION_STRINGS)} accounts...")
+    await asyncio.gather(*[start_userbot(s, i) for i, s in enumerate(SESSION_STRINGS, start=1)])
+    # Keep the bot running
     await asyncio.Event().wait()
 
 if __name__ == '__main__':
