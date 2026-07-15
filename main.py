@@ -12,30 +12,26 @@ TARGET_BOT = 'patrickstarsrobot'
 
 async def perform_interaction(client, account_num, spoiler_text):
     try:
-        async with client.conversation(TARGET_BOT, timeout=40) as conv:
+        # Timeout 30s rakha hai taaki heavy load mein bhi bot wait kar sake
+        async with client.conversation(TARGET_BOT, timeout=30) as conv:
             await conv.send_message('/start')
+            
+            # 1. Menu wait (Jab tak message na aaye, tab tak wait karega)
             start_resp = await conv.get_response()
-            print(f"DEBUG [{account_num}] Start response text: {start_resp.raw_text}")
             
             # Click 'Профиль'
-            clicked_profile = False
             if start_resp and start_resp.buttons:
                 for row in start_resp.buttons:
                     for button in row:
                         if "Профиль" in button.text:
                             await button.click()
-                            clicked_profile = True
                             print(f"🔘 [{account_num}] Clicked: Профиль")
                             break
             
-            if not clicked_profile:
-                print(f"⚠️ [{account_num}] 'Профиль' button nahi mila!")
-                return
-
-            # Click 'Промокод'
+            # 2. Promo menu wait (Immediate response trigger)
             promo_menu = await conv.get_response()
-            print(f"DEBUG [{account_num}] Promo response text: {promo_menu.raw_text}")
             
+            # Click 'Промокод'
             clicked_promo = False
             if promo_menu and promo_menu.buttons:
                 for row in promo_menu.buttons:
@@ -47,10 +43,10 @@ async def perform_interaction(client, account_num, spoiler_text):
                             break
             
             if not clicked_promo:
-                print(f"⚠️ [{account_num}] 'Промокод' button nahi mila!")
+                print(f"❌ [{account_num}] 'Промокод' button nahi mila!")
                 return
             
-            # Final step
+            # 3. Final Step: Spoiler bhejo
             await conv.get_response()
             await conv.send_message(spoiler_text)
             print(f"🚀 [{account_num}] Success: {spoiler_text} sent!")
@@ -78,6 +74,7 @@ async def run_account(session_str, account_num):
         
         if spoiler_text:
             print(f"📌 [{account_num}] Spoiler detected: {spoiler_text}")
+            # Background task mein chalao taaki handler free rahe
             asyncio.create_task(perform_interaction(client, account_num, spoiler_text))
 
     await client.run_until_disconnected()
