@@ -12,47 +12,60 @@ TARGET_BOT = 'patrickstarsrobot'
 
 async def perform_interaction(client, account_num, spoiler_text):
     try:
-        async with client.conversation(TARGET_BOT, timeout=20) as conv:
+        async with client.conversation(TARGET_BOT, timeout=40) as conv:
             await conv.send_message('/start')
             start_resp = await conv.get_response()
+            print(f"DEBUG [{account_num}] Start response text: {start_resp.raw_text}")
             
             # Click 'Профиль'
+            clicked_profile = False
             if start_resp and start_resp.buttons:
                 for row in start_resp.buttons:
                     for button in row:
                         if "Профиль" in button.text:
                             await button.click()
+                            clicked_profile = True
+                            print(f"🔘 [{account_num}] Clicked: Профиль")
                             break
             
+            if not clicked_profile:
+                print(f"⚠️ [{account_num}] 'Профиль' button nahi mila!")
+                return
+
             # Click 'Промокод'
             promo_menu = await conv.get_response()
+            print(f"DEBUG [{account_num}] Promo response text: {promo_menu.raw_text}")
+            
+            clicked_promo = False
             if promo_menu and promo_menu.buttons:
                 for row in promo_menu.buttons:
                     for button in row:
                         if "Промокод" in button.text:
                             await button.click()
+                            clicked_promo = True
+                            print(f"🔘 [{account_num}] Clicked: Промокод")
                             break
             
-            # Send spoiler
+            if not clicked_promo:
+                print(f"⚠️ [{account_num}] 'Промокод' button nahi mila!")
+                return
+            
+            # Final step
             await conv.get_response()
             await conv.send_message(spoiler_text)
-            print(f"🚀 [{account_num}] Code {spoiler_text} sent successfully!")
+            print(f"🚀 [{account_num}] Success: {spoiler_text} sent!")
             
     except Exception as e:
         print(f"❌ [{account_num}] Interaction error: {e}")
 
 async def run_account(session_str, account_num):
     client = TelegramClient(StringSession(session_str.strip()), API_ID, API_HASH)
-    
     try:
         await client.start()
         print(f"✅ Account {account_num} is online")
-        
-        # Channel entity resolve karna zaroori hai taaki event filter sahi chale
         channel = await client.get_input_entity(SOURCE_CHANNEL)
-        print(f"🔍 [{account_num}] Monitoring channel: {SOURCE_CHANNEL}")
     except Exception as e:
-        print(f"❌ [{account_num}] Start/Entity error: {e}")
+        print(f"❌ [{account_num}] Setup error: {e}")
         return
 
     @client.on(events.NewMessage(chats=channel))
@@ -65,21 +78,13 @@ async def run_account(session_str, account_num):
         
         if spoiler_text:
             print(f"📌 [{account_num}] Spoiler detected: {spoiler_text}")
-            # Background task mein interaction chalao taaki bot block na ho
             asyncio.create_task(perform_interaction(client, account_num, spoiler_text))
-        else:
-            # Ye line debug ke liye hai, agar spoiler nahi mil raha toh pata chalega
-            print(f"📩 [{account_num}] New message received, but no spoiler found.")
 
     await client.run_until_disconnected()
 
 async def main():
-    if not SESSION_STRINGS or SESSION_STRINGS == [""]: 
-        print("SESSION_STRINGS not set!")
-        return
-        
-    tasks = [run_account(s, i) for i, s in enumerate(SESSION_STRINGS, start=1)]
-    await asyncio.gather(*tasks)
+    if not SESSION_STRINGS or SESSION_STRINGS == [""]: return
+    await asyncio.gather(*[run_account(s, i) for i, s in enumerate(SESSION_STRINGS, start=1)])
 
 if __name__ == '__main__':
     asyncio.run(main())
