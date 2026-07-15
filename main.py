@@ -15,18 +15,18 @@ async def perform_interaction(client, account_num, spoiler_text):
         async with client.conversation(TARGET_BOT, timeout=30) as conv:
             await conv.send_message('/start')
             
-            # Helper function: Buttons mein emoji-safe search
+            # Helper function: Emoji-safe search in buttons
             def find_button(buttons, search_text):
                 if not buttons: return None
                 for row in buttons:
                     for button in row:
-                        # Sirf alphanumeric characters rakho (emoji/spaces hata do)
+                        # Keep only alphanumeric characters (remove emojis/spaces)
                         clean_text = "".join(c for c in button.text if c.isalpha() or c.isdigit())
                         if search_text in clean_text:
                             return button
                 return None
 
-            # 1. Start response ka wait aur click
+            # 1. Wait for start response and click
             start_resp = await conv.get_response()
             btn_profile = find_button(start_resp.buttons, "Профиль")
             
@@ -34,10 +34,10 @@ async def perform_interaction(client, account_num, spoiler_text):
                 await btn_profile.click()
                 print(f"🔘 [{account_num}] Clicked: {btn_profile.text}")
             else:
-                print(f"❌ [{account_num}] 'Профиль' button nahi mila!")
+                print(f"❌ [{account_num}] 'Профиль' button not found!")
                 return
 
-            # 2. Promo menu ka wait aur click
+            # 2. Wait for promo menu and click
             promo_menu = await conv.get_response()
             btn_promo = find_button(promo_menu.buttons, "Промокод")
             
@@ -45,10 +45,10 @@ async def perform_interaction(client, account_num, spoiler_text):
                 await btn_promo.click()
                 print(f"🔘 [{account_num}] Clicked: {btn_promo.text}")
             else:
-                print(f"❌ [{account_num}] 'Промокод' button nahi mila!")
+                print(f"❌ [{account_num}] 'Промокод' button not found!")
                 return
             
-            # 3. Final: Spoiler code bhejo
+            # 3. Final: Send spoiler code
             await conv.get_response()
             await conv.send_message(spoiler_text)
             print(f"🚀 [{account_num}] Success: {spoiler_text} sent!")
