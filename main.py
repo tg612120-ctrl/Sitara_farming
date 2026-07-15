@@ -12,41 +12,43 @@ TARGET_BOT = 'patrickstarsrobot'
 
 async def perform_interaction(client, account_num, spoiler_text):
     try:
-        # Timeout 30s rakha hai taaki heavy load mein bhi bot wait kar sake
         async with client.conversation(TARGET_BOT, timeout=30) as conv:
             await conv.send_message('/start')
             
-            # 1. Menu wait (Jab tak message na aaye, tab tak wait karega)
+            # Helper function: Buttons mein emoji-safe search
+            def find_button(buttons, search_text):
+                if not buttons: return None
+                for row in buttons:
+                    for button in row:
+                        # Sirf alphanumeric characters rakho (emoji/spaces hata do)
+                        clean_text = "".join(c for c in button.text if c.isalpha() or c.isdigit())
+                        if search_text in clean_text:
+                            return button
+                return None
+
+            # 1. Start response ka wait aur click
             start_resp = await conv.get_response()
+            btn_profile = find_button(start_resp.buttons, "Профиль")
             
-            # Click 'Профиль'
-            if start_resp and start_resp.buttons:
-                for row in start_resp.buttons:
-                    for button in row:
-                        if "Профиль" in button.text:
-                            await button.click()
-                            print(f"🔘 [{account_num}] Clicked: Профиль")
-                            break
-            
-            # 2. Promo menu wait (Immediate response trigger)
+            if btn_profile:
+                await btn_profile.click()
+                print(f"🔘 [{account_num}] Clicked: {btn_profile.text}")
+            else:
+                print(f"❌ [{account_num}] 'Профиль' button nahi mila!")
+                return
+
+            # 2. Promo menu ka wait aur click
             promo_menu = await conv.get_response()
+            btn_promo = find_button(promo_menu.buttons, "Промокод")
             
-            # Click 'Промокод'
-            clicked_promo = False
-            if promo_menu and promo_menu.buttons:
-                for row in promo_menu.buttons:
-                    for button in row:
-                        if "Промокод" in button.text:
-                            await button.click()
-                            clicked_promo = True
-                            print(f"🔘 [{account_num}] Clicked: Промокод")
-                            break
-            
-            if not clicked_promo:
+            if btn_promo:
+                await btn_promo.click()
+                print(f"🔘 [{account_num}] Clicked: {btn_promo.text}")
+            else:
                 print(f"❌ [{account_num}] 'Промокод' button nahi mila!")
                 return
             
-            # 3. Final Step: Spoiler bhejo
+            # 3. Final: Spoiler code bhejo
             await conv.get_response()
             await conv.send_message(spoiler_text)
             print(f"🚀 [{account_num}] Success: {spoiler_text} sent!")
@@ -74,7 +76,6 @@ async def run_account(session_str, account_num):
         
         if spoiler_text:
             print(f"📌 [{account_num}] Spoiler detected: {spoiler_text}")
-            # Background task mein chalao taaki handler free rahe
             asyncio.create_task(perform_interaction(client, account_num, spoiler_text))
 
     await client.run_until_disconnected()
