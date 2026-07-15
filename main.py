@@ -4,7 +4,6 @@ from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.types import MessageEntitySpoiler
 
-# API credentials
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION_STRINGS = os.getenv("SESSION_STRINGS", "").split(",")
@@ -28,35 +27,36 @@ async def start_userbot(session_str, account_num):
         print(f"📌 [{account_num}] Spoiler detected: {spoiler_text}")
 
         try:
-            async with client.conversation(TARGET_BOT) as conv:
-                # 1. Start command bhejo
+            # Conversation ko 'with' block se bahar access karo ya 
+            # check karo ki koi existing conversation to nahi
+            async with client.conversation(TARGET_BOT, timeout=20) as conv:
                 await conv.send_message('/start')
                 start_resp = await conv.get_response()
                 
-                # 2. 'Профиль' button click karo
+                # Click 'Профиль'
                 if start_resp.buttons:
                     for row in start_resp.buttons:
                         for button in row:
                             if "Профиль" in button.text:
                                 await button.click()
-                                print(f"🔘 [{account_num}] Clicked: Профиль")
                                 break
                 
-                # 3. Agle menu ka wait karo aur 'Промокод' click karo
+                # Click 'Промокод'
                 promo_menu = await conv.get_response()
                 if promo_menu.buttons:
                     for row in promo_menu.buttons:
                         for button in row:
                             if "Промокод" in button.text:
                                 await button.click()
-                                print(f"🔘 [{account_num}] Clicked: Промокод")
                                 break
                 
-                # 4. Final step: Code bhejo
+                # Send spoiler
                 await conv.get_response()
                 await conv.send_message(spoiler_text)
                 print(f"🚀 [{account_num}] Code {spoiler_text} sent!")
                         
+        except asyncio.TimeoutError:
+            print(f"❌ [{account_num}] Timeout error: Bot slow hai.")
         except Exception as e:
             print(f"❌ [{account_num}] Error: {e}")
 
@@ -64,7 +64,6 @@ async def start_userbot(session_str, account_num):
 
 async def main():
     if not SESSION_STRINGS or SESSION_STRINGS == [""]: return
-    print(f"🚀 Starting...")
     await asyncio.gather(*[start_userbot(s, i) for i, s in enumerate(SESSION_STRINGS, start=1)])
     await asyncio.Event().wait()
 
