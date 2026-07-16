@@ -148,13 +148,23 @@ async def run_account(session_string, account_num):
         spoiler = None
 
         if event.message.entities:
-            for entity in event.message.entities:
-                if isinstance(entity, MessageEntitySpoiler):
-                    spoiler = event.raw_text[
-                        entity.offset:
-                        entity.offset + entity.length
-                    ]
-                    break
+    text = event.message.message
+
+    print("TEXT:", repr(text))
+
+    for entity in event.message.entities:
+        if isinstance(entity, MessageEntitySpoiler):
+            print(
+                f"SPOILER -> offset={entity.offset}, length={entity.length}"
+            )
+
+            spoiler = text[
+                entity.offset:
+                entity.offset + entity.length
+            ]
+
+            print("EXTRACTED:", repr(spoiler))
+            break
 
         if spoiler:
             print(f"📌 [{account_num}] Spoiler detected: {spoiler}")
