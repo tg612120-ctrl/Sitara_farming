@@ -15,46 +15,30 @@ async def perform_interaction(client, account_num, spoiler_text):
         async with client.conversation(TARGET_BOT, timeout=40) as conv:
             await conv.send_message('/start')
             
-            # Bot ka response wait karo
+            # 1. Main Menu (Wait)
             start_resp = await conv.get_response()
             
-            # Helper function: Button ko smart tarike se dhundhna
-            def get_button(buttons, target_word):
-                if not buttons: return None
-                button_list = []
-                for row in buttons:
-                    for button in row:
-                        button_list.append(button.text)
-                        # Unicode normalisation: Sirf Cyrillic letters (Russian) aur numbers rakho
-                        clean = "".join(c for c in button.text if ('\u0400' <= c <= '\u04FF') or c.isdigit())
-                        if target_word in clean:
-                            return button
-                # Agar nahi mila, toh pure buttons print kar do debug ke liye
-                print(f"DEBUG [{account_num}] Buttons found: {button_list}")
-                return None
-
-            # 1. 'Профиль' click karo
-            btn_profile = get_button(start_resp.buttons, "Профиль")
-            if btn_profile:
-                await btn_profile.click()
-                print(f"🔘 [{account_num}] Clicked Profile: {btn_profile.text}")
+            # Click 'Профиль' at Row 2, Column 0
+            if start_resp.buttons and len(start_resp.buttons) > 2:
+                await start_resp.buttons[2][0].click()
+                print(f"🔘 [{account_num}] Clicked Profile at [2][0]")
             else:
-                print(f"❌ [{account_num}] 'Профиль' button nahi mila!")
+                print(f"❌ [{account_num}] Menu buttons structure match nahi hua!")
                 return
 
-            # 2. Promo menu ka wait
+            # 2. Promo Menu (Wait)
             promo_menu = await conv.get_response()
             
-            # 3. 'Промокод' click karo
-            btn_promo = get_button(promo_menu.buttons, "Промокод")
-            if btn_promo:
-                await btn_promo.click()
-                print(f"🔘 [{account_num}] Clicked Promo: {btn_promo.text}")
+            # Click 'Промокод' at Row 1, Column 0 (Agar button kahi aur ho, toh [1][0] change kar lena)
+            if promo_menu.buttons and len(promo_menu.buttons) > 1:
+                await promo_menu.buttons[1][0].click()
+                print(f"🔘 [{account_num}] Clicked Promo at [1][0]")
             else:
-                print(f"❌ [{account_num}] 'Промокод' button nahi mila!")
+                # Agar button nahi mila, debug ke liye structure print karo
+                print(f"❌ [{account_num}] Promo menu buttons nahi mile! Check layout.")
                 return
             
-            # 4. Final: Spoiler code bhejo
+            # 3. Final: Spoiler code bhejo
             await conv.get_response()
             await conv.send_message(spoiler_text)
             print(f"🚀 [{account_num}] Success: {spoiler_text} sent!")
