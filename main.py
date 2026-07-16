@@ -12,44 +12,49 @@ TARGET_BOT = 'patrickstarsrobot'
 
 async def perform_interaction(client, account_num, spoiler_text):
     try:
-        async with client.conversation(TARGET_BOT, timeout=30) as conv:
+        async with client.conversation(TARGET_BOT, timeout=40) as conv:
             await conv.send_message('/start')
             
-            # Helper function: Buttons mein emoji-safe search
-            def get_button(buttons, search_text):
+            # Bot ka response wait karo
+            start_resp = await conv.get_response()
+            
+            # Helper function: Button ko smart tarike se dhundhna
+            def get_button(buttons, target_word):
                 if not buttons: return None
+                button_list = []
                 for row in buttons:
                     for button in row:
-                        clean_text = "".join(c for c in button.text if c.isalpha() or c.isdigit())
-                        if search_text in clean_text:
+                        button_list.append(button.text)
+                        # Unicode normalisation: Sirf Cyrillic letters (Russian) aur numbers rakho
+                        clean = "".join(c for c in button.text if ('\u0400' <= c <= '\u04FF') or c.isdigit())
+                        if target_word in clean:
                             return button
+                # Agar nahi mila, toh pure buttons print kar do debug ke liye
+                print(f"DEBUG [{account_num}] Buttons found: {button_list}")
                 return None
 
-            # 1. Start response ka wait
-            start_resp = await conv.get_response()
+            # 1. 'Профиль' click karo
             btn_profile = get_button(start_resp.buttons, "Профиль")
-            
             if btn_profile:
-                await asyncio.sleep(0.5) # Bot ko saans lene do
                 await btn_profile.click()
-                print(f"🔘 [{account_num}] Clicked: {btn_profile.text}")
+                print(f"🔘 [{account_num}] Clicked Profile: {btn_profile.text}")
             else:
                 print(f"❌ [{account_num}] 'Профиль' button nahi mila!")
                 return
 
             # 2. Promo menu ka wait
             promo_menu = await conv.get_response()
-            btn_promo = get_button(promo_menu.buttons, "Промокод")
             
+            # 3. 'Промокод' click karo
+            btn_promo = get_button(promo_menu.buttons, "Промокод")
             if btn_promo:
-                await asyncio.sleep(0.5)
                 await btn_promo.click()
-                print(f"🔘 [{account_num}] Clicked: {btn_promo.text}")
+                print(f"🔘 [{account_num}] Clicked Promo: {btn_promo.text}")
             else:
                 print(f"❌ [{account_num}] 'Промокод' button nahi mila!")
                 return
             
-            # 3. Final: Spoiler code bhejo
+            # 4. Final: Spoiler code bhejo
             await conv.get_response()
             await conv.send_message(spoiler_text)
             print(f"🚀 [{account_num}] Success: {spoiler_text} sent!")
@@ -58,7 +63,6 @@ async def perform_interaction(client, account_num, spoiler_text):
         print(f"❌ [{account_num}] Interaction error: {e}")
 
 async def run_account(session_str, account_num):
-    # StringSession ko handle karna
     client = TelegramClient(StringSession(session_str.strip()), API_ID, API_HASH)
     try:
         await client.start()
@@ -74,12 +78,10 @@ async def run_account(session_str, account_num):
         if event.message.entities:
             for entity in event.message.entities:
                 if isinstance(entity, MessageEntitySpoiler):
-                    # Spoiler ka text nikaalo
                     spoiler_text = event.raw_text[entity.offset:entity.offset+entity.length]
         
         if spoiler_text:
             print(f"📌 [{account_num}] Spoiler detected: {spoiler_text}")
-            # Background task taaki bot hang na ho
             asyncio.create_task(perform_interaction(client, account_num, spoiler_text))
 
     await client.run_until_disconnected()
@@ -90,4 +92,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
