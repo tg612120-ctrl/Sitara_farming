@@ -150,9 +150,9 @@ async def run_account(session_string, account_num):
         if event.message.entities:
         text = event.message.message
 
-    print("TEXT:", repr(text))
+        print("TEXT:", repr(text))
 
-    for entity in event.message.entities:
+        for entity in event.message.entities:
         if isinstance(entity, MessageEntitySpoiler):
             print(
                 f"SPOILER -> offset={entity.offset}, length={entity.length}"
