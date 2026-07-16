@@ -1,9 +1,10 @@
-import os
+hereimport os
 import asyncio
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.types import MessageEntitySpoiler
 
+# Configurations
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION_STRINGS = os.getenv("SESSION_STRINGS", "").split(",")
@@ -18,27 +19,33 @@ async def perform_interaction(client, account_num, spoiler_text):
             # 1. Main Menu (Wait)
             start_resp = await conv.get_response()
             
-            # Click 'Профиль' at Row 2, Column 0
+            # DEBUGGING: Buttons ka layout check karne ke liye
+            if start_resp.buttons:
+                print(f"DEBUG [{account_num}] Layout check:")
+                for r_idx, row in enumerate(start_resp.buttons):
+                    print(f"DEBUG [{account_num}] Row {r_idx}: {[b.text for b in row]}")
+            
+            # Click 'Профиль' (Index based - adjust if needed from logs)
+            # Row 2, Column 0 ke hisaab se try kar rahe hain
             if start_resp.buttons and len(start_resp.buttons) > 2:
                 await start_resp.buttons[2][0].click()
                 print(f"🔘 [{account_num}] Clicked Profile at [2][0]")
             else:
-                print(f"❌ [{account_num}] Menu buttons structure match nahi hua!")
+                print(f"❌ [{account_num}] Menu buttons structure nahi mila!")
                 return
 
             # 2. Promo Menu (Wait)
             promo_menu = await conv.get_response()
             
-            # Click 'Промокод' at Row 1, Column 0 (Agar button kahi aur ho, toh [1][0] change kar lena)
+            # Click 'Промокод' (Adjust index based on logs)
             if promo_menu.buttons and len(promo_menu.buttons) > 1:
                 await promo_menu.buttons[1][0].click()
                 print(f"🔘 [{account_num}] Clicked Promo at [1][0]")
             else:
-                # Agar button nahi mila, debug ke liye structure print karo
-                print(f"❌ [{account_num}] Promo menu buttons nahi mile! Check layout.")
+                print(f"❌ [{account_num}] Promo menu buttons nahi mile!")
                 return
             
-            # 3. Final: Spoiler code bhejo
+            # 3. Final Step: Spoiler code bhejo
             await conv.get_response()
             await conv.send_message(spoiler_text)
             print(f"🚀 [{account_num}] Success: {spoiler_text} sent!")
