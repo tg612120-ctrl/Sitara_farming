@@ -148,7 +148,7 @@ async def run_account(session_string, account_num):
         spoiler = None
 
         if event.message.entities:
-    text = event.message.message
+        text = event.message.message
 
     print("TEXT:", repr(text))
 
