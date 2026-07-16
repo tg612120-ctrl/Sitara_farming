@@ -1,5 +1,6 @@
 import os
 import asyncio
+import re
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.types import MessageEntitySpoiler
@@ -146,25 +147,26 @@ async def run_account(session_string, account_num):
     async def handler(event):
 
         spoiler = None
+        text = event.message.message or ""
 
+        # Pehle spoiler entity try karo
         if event.message.entities:
-            text = event.message.message
-
-            print("TEXT:", repr(text))
-
             for entity in event.message.entities:
                 if isinstance(entity, MessageEntitySpoiler):
-                    print(
-                        f"SPOILER -> offset={entity.offset}, length={entity.length}"
-                    )
-
-                    spoiler = text[
-                        entity.offset:
-                        entity.offset + entity.length
-                    ]
-
-                    print("EXTRACTED:", repr(spoiler))
+                    try:
+                        spoiler = text[
+                            entity.offset:
+                            entity.offset + entity.length
+                        ]
+                    except:
+                        pass
                     break
+
+        # Agar entity galat nikle to English promo code detect karo
+        match = re.search(r"[A-Za-z0-9_]{6,}$", text)
+
+        if match:
+            spoiler = match.group(0)
 
         if spoiler:
             print(f"📌 [{account_num}] Spoiler detected: {spoiler}")
