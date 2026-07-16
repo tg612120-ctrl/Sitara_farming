@@ -138,6 +138,9 @@ async def run_account(session_string, account_num):
         print(f"✅ Account {account_num} is online")
 
         channel = await client.get_input_entity(SOURCE_CHANNEL)
+        
+        me = await client.get_me()
+        print(f"[{account_num}] Logged in as @{me.username} ({me.id})")
 
     except Exception as e:
         print(f"❌ [{account_num}] Startup Error: {e}")
@@ -145,6 +148,7 @@ async def run_account(session_string, account_num):
 
     @client.on(events.NewMessage(chats=channel))
     async def handler(event):
+        print(f"📂 [{account_num}] New message received")
 
         spoiler = None
         text = event.message.message or ""
